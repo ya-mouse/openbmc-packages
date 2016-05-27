@@ -16,9 +16,10 @@ include $(INCLUDE_DIR)/package.mk
 
 define KernelPackage/i2c-ast
   SUBMENU:=I2C support
-  DEPENDS:=@TARGET_aspeed
+  DEPENDS:=@TARGET_aspeed +kmod-ast-helper
   TITLE:=Aspeed i2c algorithm
   FILES:=$(PKG_BUILD_DIR)/i2c_hw.ko
+  AUTOLOAD:=$(call AutoLoad,30,i2c_hw)
 endef
 
 define Build/Prepare
