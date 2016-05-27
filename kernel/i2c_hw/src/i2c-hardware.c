@@ -461,7 +461,7 @@ void i2c_init_hardware(int bus)
     /* Set Function Register */
 	i2c_as_write_reg(bus, DEFAULT_BUF_CONTROL_VAL, I2C_BUF_CONTROL_REG);
 
-#if !defined(SOC_AST3100)
+#if !defined(CONFIG_SOC_AST3100)
 #if defined(CONFIG_SPX_FEATURE_I2C_DMA_MODE)
 	/* Enable SRAM Buffer */
 	i2c_as_write_global_reg( ENABLE_SRAM_BUFFER, I2C_GLOBAL_CONTROL_REG);

@@ -21,21 +21,21 @@
 
 #define AST_I2C_DMA_SIZE 4096
 
-#if defined(SOC_AST2300)
+#if defined(CONFIG_SOC_AST2300)
 #define GROUP_AST2300 1
 #endif
-#if defined(SOC_AST2400) || defined(SOC_AST3100) || defined(SOC_AST3200)
+#if defined(CONFIG_SOC_AST2400) || defined(CONFIG_SOC_AST3100) || defined(CONFIG_SOC_AST3200)
 #define GROUP_AST2300_PLUS 1
 #endif
-#if defined(SOC_AST2500) || defined(SOC_AST2530)
+#if defined(CONFIG_SOC_AST2500) || defined(CONFIG_SOC_AST2530)
 #define GROUP_AST2500 1
 #endif
 #if defined(CONFIG_SPX_FEATURE_BMCCOMPANIONDEVICE_AST1070)
 #define GROUP_AST1070_COMPANION 1
-#elif defined(SOC_AST1250)
+#elif defined(CONFIG_SOC_AST1250)
 #define GROUP_AST2300_PLUS 1
 #endif
-#if defined(SOC_AST1050_1070)
+#if defined(CONFIG_SOC_AST1050_1070)
 #define GROUP_AST1070_COMPANION 1
 #endif
 

@@ -49,13 +49,13 @@
 #define MAX_ALLOWED_BUS_BUSY_FAILURES	( 10 )
 #endif
 
-#if defined(SOC_AST2150)
+#if defined(CONFIG_SOC_AST2150)
 #define CLOCK_AC_1_VAL_100K		0x77754355	/* 100KHz for AST2150 */
 #define CLOCK_AC_1_VAL_400K		0x77754333	/* 400KHz for AST2150 */
 #define CLOCK_AC_1_VAL_1000K		0x77755301	
 
 #endif
-#if defined(SOC_AST2050)
+#if defined(CONFIG_SOC_AST2050)
 #define CLOCK_AC_1_VAL_100K		0x77777344	/* 100KHz for AST2050 */
 #define CLOCK_AC_1_VAL_400K		0x77776322	/* 400KHz for AST2050 */
 #define CLOCK_AC_1_VAL_1000K		0x77755301	
@@ -304,7 +304,7 @@
 #define I2C_SLAVE_ADDR_REG  		   (0x18)
 #define I2C_BUF_CONTROL_REG  		   (0x1C)
 #define I2C_DATA_REG        		   (0x20)
-#if !defined(SOC_AST3100)
+#if !defined(CONFIG_SOC_AST3100)
 #define I2C_DMA_MODE_CONTROL_REG	   (0x24)
 #define I2C_DMA_MODE_STATUS_REG	   	   (0x28)
 #endif
@@ -372,7 +372,7 @@
 #define ENABLE_SMBUS_ARP_HOST_ADDR_RESP				(1 << 3)
 #define ENABLE_SMBUS_ALERT_RESP_ADDR				(1 << 4)
 #define ENABLE_SMBUS_DEFAULT_ADDR					(1 << 5)
-#if defined(SOC_AST3100)	
+#if defined(CONFIG_SOC_AST3100)	
 //AST3100 supports high speed (3.4Mbps). Can only act as Master in this mode. Should use buffer. 
 #define ENABLE_FAST_MODE						    (1 << 6)
 #else
@@ -380,7 +380,7 @@
 #endif
 #define ENABLE_SCL_ACTIVE_PULL_HIGH					(1 << 7)
 #define ENABLE_SDA_ACTIVE_PULL_HIGH					(1 << 8)
-#if !defined(SOC_AST3100)	//These bits are reserved in AST3100
+#if !defined(CONFIG_SOC_AST3100)	//These bits are reserved in AST3100
 #define ENABLE_LSB_FIRST							(1 << 9)
 #define ENABLE_RECV_FAST_MODE						(1 << 10)
 #else
@@ -407,7 +407,7 @@
 #define ENABLE_ABNORMAL_START_STOP_RECVD_INTR		(1 << 5)
 #define ENABLE_SCL_LOW_TIMEOUT_INTR					(1 << 6)
 #define ENABLE_SLAVE_ADDR_MATCH_INTR				(1 << 7)
-#if !defined(SOC_AST3100)	//These bits are reserved in AST3100
+#if !defined(CONFIG_SOC_AST3100)	//These bits are reserved in AST3100
 #define ENABLE_GENERAL_CALL_ADDR_MATCH_INTR			(1 << 8)
 #define ENABLE_SMBUS_DEFAULT_ADDR_MATCH_INTR		(1 << 9)
 #define ENABLE_SMBUS_ALERT_RESP_ADDR_MATCH_INTR		(1 << 10)
@@ -415,7 +415,7 @@
 #endif
 #define ENABLE_SMBUS_DEVICE_ALERT_INTR				(1 << 12)
 #define ENABLE_BUS_RECOVER_DONE_INTR				(1 << 13)
-#if defined(SOC_AST3100)
+#if defined(CONFIG_SOC_AST3100)
 #define ENABLE_SDA_LOW_TIMEOUT_INTR					(1 << 14)
 #endif
 
@@ -434,7 +434,7 @@
 #define SMBUS_ARP_HOST_ADDR_MATCH					(1 << 11)
 #define SMBUS_DEVICE_ALERT							(1 << 12)
 #define BUS_RECOVER_DONE							(1 << 13)
-#if defined(SOC_AST3100)
+#if defined(CONFIG_SOC_AST3100)
 #define SDA_LOW_TIMEOUT								(1 << 14)
 #endif
 
@@ -447,7 +447,7 @@
 #define MASTER_STOP									(1 << 5)
 #define ENABLE_MASTER_SLAVE_TX_DATA_BUF				(1 << 6)
 #define ENABLE_MASTER_SLAVE_RX_DATA_BUF				(1 << 7)
-#if !defined(SOC_AST3100)	//These bits are reserved in AST3100
+#if !defined(CONFIG_SOC_AST3100)	//These bits are reserved in AST3100
 #define ENABLE_MASTER_SLAVE_TX_DMA_BUF				(1 << 8)
 #define ENABLE_MASTER_SLAVE_RX_DMA_BUF				(1 << 9)
 #endif
