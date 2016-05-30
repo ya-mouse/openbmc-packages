@@ -188,11 +188,13 @@ init_helper(void)
 
 	/* Create this module's directory entry in proc and add a file "HwInfo" */
 	moduledir = proc_mkdir("Helper",rootdir);
+#if 0
 	fwinfo_proc = AddProcEntry(moduledir,"FwInfo",fwinfo_read,NULL,NULL);
 
 #ifdef CONFIG_SPX_FEATURE_GLOBAL_DUAL_IMAGE_SUPPORT
 	fwinfo1_proc = AddProcEntry(moduledir,"FwInfo1",fwinfo1_read,NULL,NULL);
 	fwinfo2_proc = AddProcEntry(moduledir,"FwInfo2",fwinfo2_read,NULL,NULL);
+#endif
 #endif
 
 	
@@ -209,6 +211,7 @@ exit_helper(void)
 	/* Remove driver related sysctl entries */
 	RemoveSysctlTable(helper_sys);
 
+#if 0
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,36))
 	/* Remove the driver's proc entries */
 	RemoveProcEntry(fwinfo_proc);
@@ -226,6 +229,7 @@ exit_helper(void)
 #endif
 	
 #endif
+#endif
 
 	/* Remove the driver's proc entries */
 	remove_proc_entry("Helper",rootdir);
@@ -233,7 +237,7 @@ exit_helper(void)
 	/* Remove the rootdir under /proc */
 	remove_proc_entry(PROC_DIR,NULL);
 
-	free_info_cache();
+	//free_info_cache();
 	return;
 }
 
