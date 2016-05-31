@@ -19,6 +19,7 @@ define KernelPackage/ast-helper
   DEPENDS:=@TARGET_aspeed
   TITLE:=Helper functions for other Aspeed drivers
   FILES:=$(PKG_BUILD_DIR)/helper.ko
+  AUTOLOAD:=$(call AutoLoad,20,helper)
 endef
 
 define Build/Prepare
