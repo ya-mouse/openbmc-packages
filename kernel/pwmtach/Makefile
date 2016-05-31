@@ -41,7 +41,14 @@ define Build/Compile
 	$(MAKE) -C "$(LINUX_DIR)" \
 		CROSS_COMPILE="$(TARGET_CROSS)" \
 		ARCH="$(LINUX_KARCH)" \
-		SUBDIRS="$(PKG_BUILD_DIR)/pwmtach $(PKG_BUILD_DIR)/pwmtach_hw" \
+		SUBDIRS="$(PKG_BUILD_DIR)/pwmtach" \
+		EXTRA_CFLAGS="$(BUILDFLAGS)" \
+		modules
+
+	$(MAKE) -C "$(LINUX_DIR)" \
+		CROSS_COMPILE="$(TARGET_CROSS)" \
+		ARCH="$(LINUX_KARCH)" \
+		SUBDIRS="$(PKG_BUILD_DIR)/pwmtach_hw" \
 		EXTRA_CFLAGS="$(BUILDFLAGS)" \
 		modules
 endef
