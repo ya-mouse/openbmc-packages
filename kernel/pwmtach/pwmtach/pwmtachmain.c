@@ -101,12 +101,16 @@ static struct cdev *pwmtach_cdev;
 static dev_t pwmtach_devno = MKDEV(PWMTACH_MAJOR, PWMTACH_MINOR);
 static char banner[] __initdata = KERN_INFO "PWMTACH Common Driver, (c) 2009-2015 American Megatrends Inc.\n";
 
+static struct class *pwmtach_class;
+
 
 /***********************************************************************************************/
 
 static void __exit
 pwmtach_exit (void)
 {
+	class_destroy(pwmtach_class);
+
         unregister_core_hal_module (EDEV_TYPE_PWMTACH);
 	unregister_chrdev_region (pwmtach_devno, MAX_PWMTACH_DEVICES);
 
@@ -146,6 +150,8 @@ register_pwmtach_hal_module (unsigned char num_instances, void *phal_ops, void *
 		return -ENOMEM;
 	}
 
+	device_create(pwmtach_class, NULL, MKDEV(PWMTACH_MAJOR, g_dev_id), NULL, PWMTACH_DEV_NAME "%u", g_dev_id);
+
 	ppwmtach_hal->dev_id = g_dev_id;
 	g_dev_id++;
 	ppwmtach_hal->num_fans = num_instances;
@@ -162,6 +168,7 @@ int unregister_pwmtach_hal_module (void *phw_data)
 {
 	struct pwmtach_hal *ppwmtach_hal = (struct pwmtach_hal *)phw_data;
         dbgprint ("unregister hal addr : %p\n", ppwmtach_hal);
+	device_destroy(pwmtach_class, MKDEV(PWMTACH_MAJOR, ppwmtach_hal->dev_id));
 	kfree (ppwmtach_hal->fan_property_table);
 	kfree (ppwmtach_hal->fan_map_table);
 	kfree (ppwmtach_hal);
@@ -636,12 +643,18 @@ pwmtach_init (void)
 	int ret = 0; 
 	printk(banner);
 	
+	pwmtach_class = class_create(THIS_MODULE, PWMTACH_DEV_NAME);
+	if (IS_ERR(pwmtach_class)) {
+		printk ("Failed in creating class: %s\n", PWMTACH_DEV_NAME);
+		return -1;
+	}
+	
 	if ((ret = register_chrdev_region (pwmtach_devno, MAX_PWMTACH_DEVICES, PWMTACH_DEV_NAME)) < 0)
 	{
 		printk ("failed to register device pwmtach device <%s> (err: %d)\n", PWMTACH_DEV_NAME, ret);
 		return ret;
 	}
-	
+
 	pwmtach_cdev = cdev_alloc();
 	if (!pwmtach_cdev)
 	{

@@ -19,7 +19,7 @@ define KernelPackage/pwmtach-ast
   DEPENDS:=@TARGET_aspeed +kmod-ast-helper
   TITLE:=Aspeed PWM tach HAL driver
   FILES:=$(PKG_BUILD_DIR)/pwmtach/pwmtach.ko
-  AUTOLOAD:=$(call AutoLoad,30,pwmtach)
+  AUTOLOAD:=$(call AutoLoad,25,pwmtach)
 endef
 
 define KernelPackage/pwmtach_hw-ast
