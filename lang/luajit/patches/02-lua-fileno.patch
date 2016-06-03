@@ -1,0 +1,22 @@
+--- LuaJIT-2.0.4/src/host/minilua.c.orig	2015-05-14 21:30:00.000000000 +0300
++++ LuaJIT-2.0.4/src/host/minilua.c	2016-06-03 15:03:53.382976002 +0300
+@@ -6699,6 +6699,11 @@ FILE**pf=newfile(L);
+ *pf=fopen(filename,mode);
+ return(*pf==NULL)?pushresult(L,0,filename):1;
+ }
++static int io_fileno(lua_State*L){
++FILE*f=*(FILE**)luaL_checkudata(L,1,LUA_FILEHANDLE);
++checknargs(L,1);
++return pushresult(L,fileno(f),NULL);
++}
+ static FILE*getiofile(lua_State*L,int findex){
+ FILE*f;
+ lua_rawgeti(L,(-10001),findex);
+@@ -6917,6 +6922,7 @@ static const luaL_Reg iolib[]={
+ {"read",io_read},
+ {"type",io_type},
+ {"write",io_write},
++{"fileno",io_fileno},
+ {NULL,NULL}
+ };
+ static const luaL_Reg flib[]={
