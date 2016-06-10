@@ -20,7 +20,7 @@ typedef struct
 {
 	unsigned char id;
 	unsigned int value;
-}__attribute__((packed)) pwmtach_property_t;
+} pwmtach_property_t;
 
 typedef struct 
 {
@@ -41,7 +41,7 @@ typedef struct
 	pwmtach_property_t property;
 	void* fanproperty_dataptr;
 	void* fanmap_dataptr;
-}  __attribute__((packed)) pwmtach_data_t;
+} pwmtach_data_t;
 
 #define ENABLE_PWM_CHANNEL                     _IOW('P', 0, int)
 #define DISABLE_PWM_CHANNEL                    _IOW('P', 1, int)
