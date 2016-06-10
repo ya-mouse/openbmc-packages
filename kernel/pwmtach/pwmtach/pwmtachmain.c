@@ -450,7 +450,7 @@ pwmtach_ioctl (struct inode *inode, struct file *file, uint cmd, ulong arg)
 static int
 init_pwmtach (struct pwmtach_dev* pdev, pwmtach_data_t* in_data)
 {
-#if 1
+#if 0
 	in_data->pwmnumber = get_pwm_number(pdev, in_data->fannumber);
 	if (in_data->pwmnumber < 0)
 		return -1;
