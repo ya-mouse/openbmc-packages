@@ -515,6 +515,15 @@ static void ast_pwmtach_init_hw(void)
 	uint32_t reg;
 
 	iowrite32(AST_SCU_UNLOCK_MAGIC, (void * __iomem)SCU_KEY_CONTROL_REG); /* unlock SCU */
+
+	/* SCU Pin-MUX: PWM & TACHO */
+	reg = ioread32((void *__iomem)SCU_MULTI_FN_PIN_3);
+	reg &= ~0xcfffff;
+	iowrite32(reg | 0xc000ff, (void * __iomem)SCU_MULTI_FN_PIN_3);
+
+//	reg = ioread32((void *__iomem)SCU_MULTI_FN_PIN_5);
+//	iowrite32(reg | 0x30, (void * __iomem)SCU_MULTI_FN_PIN_5);
+
 	reg = ioread32((void * __iomem)SCU_SYS_RESET_REG);
 	reg &= ~(0x200); /* stop the reset */
 	iowrite32(reg, (void * __iomem)SCU_SYS_RESET_REG);
