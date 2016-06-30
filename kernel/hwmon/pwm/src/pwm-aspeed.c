@@ -238,9 +238,6 @@ static int ast_pwm_config(struct pwm_chip *chip,
 		}
 	}
 
-	/* 0xFF11 --> 24000000 / (2 * 2 * 256) = 23437.5 Hz */
-
-	/* (2 * 2 * 256) / 24000000 = sec */
 	c = clk_get_rate(ast->clk);
 	c = c * period_ns;
 	do_div(c, 1000000000);
@@ -252,14 +249,14 @@ static int ast_pwm_config(struct pwm_chip *chip,
 //	printk("t->ns=%ld ns=%ld p=%ld pc=%ld\n",
 //		type->period_ns, period_ns, type->period, period_cycles);
 	if (type->period_ns != period_ns || type->period != period_cycles) {
-		int minv;
+		int min_epsilon;
 		int min_i = 0;
 		int min_j = 0;
 		register int i, j, k, v, pv, p;
 
 		p = period_cycles >> 8;
-		minv = p;
-		/* Brute force searching */
+		min_epsilon = p;
+		/* Brute force H/L values calculating */
 		for (i=0; i<16; i++) {
 			v = p;
 			pv = 0;
@@ -268,14 +265,14 @@ static int ast_pwm_config(struct pwm_chip *chip,
 				v = (1 << j) * k;
 				if (v >= p) {
 					if ((p - pv) > (v - p)) {
-						if ((v - p) < minv) {
-							minv = (v-p);
+						if ((v - p) < min_epsilon) {
+							min_epsilon = (v-p);
 							min_i = i;
 							min_j = j;
 						}
 					} else {
-						if ((v - pv) < minv) {
-							minv = (v-pv);
+						if ((v - pv) < min_epsilon) {
+							min_epsilon = (v-pv);
 							min_i = i;
 							min_j = j-1;
 						}
@@ -291,7 +288,7 @@ static int ast_pwm_config(struct pwm_chip *chip,
 			if (v == p)
 				break;
 		}
-		printk("minv=%d i=%d j=%d\n", minv, min_i, min_j);
+		printk("min_epsilon=%d i=%d j=%d\n", min_epsilon, min_i, min_j);
 		type->period = period_cycles;
 		type->period_ns = period_ns;
 
