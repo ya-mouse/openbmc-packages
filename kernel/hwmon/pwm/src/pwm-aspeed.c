@@ -213,10 +213,9 @@ static int ast_pwm_config(struct pwm_chip *chip,
 		ret = sysfs_merge_group(&child->kobj, &ast_pwm_group);
 		put_device(child);
 		if (ret)
-			return ret;
+			printk("merge failed: %d\n", ret);
 
 		pwm->merged = 1;
-		return 0;
 	}
 
 	if (!enable) {
@@ -250,7 +249,9 @@ static int ast_pwm_config(struct pwm_chip *chip,
 	if (!period_cycles)
 		return -EINVAL;
 
-	if (type->period_ns != period_ns && type->period != period_cycles) {
+//	printk("t->ns=%ld ns=%ld p=%ld pc=%ld\n",
+//		type->period_ns, period_ns, type->period, period_cycles);
+	if (type->period_ns != period_ns || type->period != period_cycles) {
 		int minv;
 		int min_i = 0;
 		int min_j = 0;
@@ -298,6 +299,7 @@ static int ast_pwm_config(struct pwm_chip *chip,
 		val = ast_readl(type->reg);
 		val &= ~(0xffff << type->shift);
 		val |= (0xff00 | (min_j << 4) | min_i) << type->shift;
+		printk("period reg%02x=%08x\n", type->reg, val);
 		ast_writel(val, type->reg);
 	}
 
@@ -316,12 +318,12 @@ static int ast_pwm_config(struct pwm_chip *chip,
 	}
 
 	val = ast_readl(reg);
-	printk("reg%02x=%08x ", reg, val);
+//	printk("\nreg%02x=%08x (off=%d) ", reg, val, offset);
 	val &= ~(0xffff << offset);
-	ast_writel(val | ((duty_cycles << 4 | 0x00) << offset), reg);
-	printk("-> %08x\n", val | ((duty_cycles << 4 | 0x00) << offset));
+	ast_writel(val | ((duty_cycles << 8) << offset), reg);
+//	printk("-> %08x\n", val | ((duty_cycles << 8) << offset));
 
-	printk("period_cycles=%ld duty_cycles=%ld\n", period_cycles, duty_cycles);
+//	printk("period_cycles=%ld duty_cycles=%ld\n", period_cycles, duty_cycles);
 
 	return 0;
 }
@@ -348,6 +350,13 @@ static int ast_pwm_start_stop(struct ast_chip *ast, struct pwm_device *_pwm, int
 		val &= ~mask;
 	ast_writel(val, reg);
 
+	/* Enable PWM & Tach */
+	if (start) {
+		val = ast_readl(PWMTACH_GEN);
+		if ((val & 0x1) != 0x1)
+			ast_writel(val | 0x1, PWMTACH_GEN);
+	}
+
 	return 0;
 }
 
@@ -370,6 +379,29 @@ static void ast_pwm_disable(struct pwm_chip *chip, struct pwm_device *pwm)
 	ast_pwm_start_stop(ast, pwm, false);
 
 	clk_disable_unprepare(ast->clk);
+}
+
+struct pwm_device *
+ast_pwm_of_xlate(struct pwm_chip *pc, const struct of_phandle_args *args)
+{
+	struct pwm_device *pwm;
+	struct ast_pwm_device *astpwm;
+
+	if (pc->of_pwm_n_cells < 5)
+		return ERR_PTR(-EINVAL);
+
+	if (args->args[0] >= pc->npwm)
+		return ERR_PTR(-EINVAL);
+
+	pwm = pwm_request_from_chip(pc, args->args[0], NULL);
+	if (IS_ERR(pwm))
+		return pwm;
+
+	astpwm = pwm_get_chip_data(pwm);
+	astpwm->type = args->args[4];
+	pwm_config(pwm, args->args[2], args->args[3]);
+
+	return pwm;
 }
 
 static struct pwm_ops ast_pwm_ops = {
@@ -407,18 +439,16 @@ static void ast_pwm_init_one(struct ast_chip *ast)
 	/* END FIXME */
 
 
+	/* Reset registers, disable PWM & Tach */
+	ast_writel(0, PWMTACH_GEN);
+	ast_writel(0, PWMTACH_EXT_GEN);
+
 	/* Set clock division and period of type M/N */
 	/* 0xFF11 --> 24000000 / (2 * 2 * 256) = 23437.5 Hz */
 	ast_writel(0xff11ff11, PWMTACH_CLK);
-	reg = ast_readl(PWMTACH_GEN);
-	reg &= ~(0xf0f0);
-	ast_writel(reg, PWMTACH_GEN);
 
 	/* Set clock division and period of type O */
 	ast_writel(0xff11, PWMTACH_EXT_CLK);
-	reg = ast_readl(PWMTACH_EXT_GEN);
-	reg &= ~(0xf0f0);
-	ast_writel(reg, PWMTACH_EXT_GEN);
 
 	/* Initialize all channels to lowest speed (0x01) */
 	ast_writel(0x01000100, PWMTACH_DUTY_0);
@@ -457,9 +487,11 @@ static int ast_pwm_probe(struct platform_device *pdev)
 	ast->chip.dev = &pdev->dev;
 	ast->chip.base = -1;
 	ast->chip.can_sleep = true;
+	ast->chip.of_pwm_n_cells = 5;
+	ast->chip.of_xlate = ast_pwm_of_xlate;
 	ret = of_property_read_u32(np, "pwm-number", &ast->chip.npwm);
 	if (ret < 0) {
-		dev_err(&pdev->dev, "failed to get pwm number: %d\n", ret);
+		dev_err(&pdev->dev, "failed to get pwm-number: %d\n", ret);
 		return ret;
 	}
 
