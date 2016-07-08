@@ -1,0 +1,51 @@
+--- freeipmi-1.5.2/common/portability/freeipmi-argp-fmtstream.h.orig	2015-11-14 03:07:40.000000000 +0300
++++ freeipmi-1.5.2/common/portability/freeipmi-argp-fmtstream.h	2016-07-05 21:40:02.750938983 +0300
+@@ -192,7 +192,7 @@ extern void __argp_fmtstream_update (arg
+ extern int _argp_fmtstream_ensure (argp_fmtstream_t __fs, size_t __amount);
+ extern int __argp_fmtstream_ensure (argp_fmtstream_t __fs, size_t __amount);
+ 
+-#ifdef __OPTIMIZE__
++#ifdef __OPTIMIZE2__
+ /* Inline versions of above routines.  */
+ 
+ #if !_LIBC
+--- freeipmi-1.5.2/common/portability/freeipmi-argp-help.c.orig	2015-11-14 03:07:40.000000000 +0300
++++ freeipmi-1.5.2/common/portability/freeipmi-argp-help.c	2016-07-05 21:39:44.239226869 +0300
+@@ -52,7 +52,7 @@ char *alloca ();
+ 
+ #ifndef _
+ /* This is for other GNU distributions with internationalized messages.  */
+-# if defined HAVE_LIBINTL_H || defined _LIBC
++# if defined HAVE_LIBINTL_H || (_LIBC-0)
+ #  include <libintl.h>
+ #  ifdef _LIBC
+ #   undef dgettext
+@@ -68,7 +68,7 @@ char *alloca ();
+ #include "freeipmi-argp-namefrob.h"
+ 
+ 
+-#ifndef _LIBC
++#if !(_LIBC-0)
+ # ifndef __strchrnul
+ #  define __strchrnul strchrnul
+ # endif
+@@ -89,7 +89,7 @@ char *alloca ();
+ # define STRERROR strerror
+ #endif
+ 
+-#if !_LIBC
++#ifndef _LIBC
+ #include "freeipmi-portability.h"
+ #endif /* !_LIBC */
+ 
+--- freeipmi-1.5.2/common/portability/freeipmi-argp-parse.c.orig	2015-11-14 03:07:40.000000000 +0300
++++ freeipmi-1.5.2/common/portability/freeipmi-argp-parse.c	2016-07-05 21:39:11.475736331 +0300
+@@ -50,7 +50,7 @@ char *alloca ();
+ #ifndef _
+ /* This is for other GNU distributions with internationalized messages.
+    When compiling libc, the _ macro is predefined.  */
+-# if defined HAVE_LIBINTL_H || defined _LIBC
++# if defined HAVE_LIBINTL_H || (_LIBC-0)
+ #  include <libintl.h>
+ #  ifdef _LIBC
+ #   undef dgettext
