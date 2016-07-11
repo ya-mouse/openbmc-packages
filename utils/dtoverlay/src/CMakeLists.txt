@@ -6,6 +6,8 @@ IF (CMAKE_COMPILER_IS_GNUCC)
    ADD_DEFINITIONS (-ffunction-sections)
 ENDIF ()
 
+ADD_DEFINITIONS(-DFORCE_BOOT_DIR="/etc")
+
 FILE(GLOB SOURCES dtovl/*.c libfdt/*.c)
 
 ADD_EXECUTABLE(dtoverlay dtoverlay_main.c utils.c ${SOURCES})

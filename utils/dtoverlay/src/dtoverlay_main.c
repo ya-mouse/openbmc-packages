@@ -236,16 +236,7 @@ int main(int argc, const char **argv)
     {
 	root_check();
 
-	cfg_dir = CFG_DIR_2;
-	if (!dir_exists(cfg_dir))
-	{
-	    if (mkdir(cfg_dir, DIR_MODE) != 0)
-		fatal_error("Failed to create '%s' - %d", cfg_dir, errno);
-	}
-
-	cfg_dir = CFG_DIR_2 DT_SUBDIR;
-	if (!dir_exists(cfg_dir) &&
-	    (run_cmd("mount -t configfs none '%s'", cfg_dir) != 0))
+	if (run_cmd("mount -t configfs none '%s'", CFG_DIR_1) != 0)
 	    fatal_error("Failed to mount configfs - %d", errno);
     }
 
@@ -860,7 +851,7 @@ static void usage(void)
     }
     printf("Options applicable to most variants:\n");
     printf("    -d <dir>    Specify an alternate location for the overlays\n");
-    printf("                (defaults to /boot/overlays or /flash/overlays)\n");
+    printf("                (defaults to /etc/overlays)\n");
     printf("    -v          Verbose operation\n");
     printf("\n");
     printf("Adding or removing overlays and parameters requires root privileges.\n");
