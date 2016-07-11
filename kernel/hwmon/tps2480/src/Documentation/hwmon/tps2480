@@ -1,0 +1,61 @@
+Kernel driver tps2480
+=====================
+
+Supported chips:
+  * Texas Instruments TPS2480 / TPS2481
+    Prefixes: 'tps2480'/'tps2481'
+    Datasheet: Covers both chips
+               http://www.ti.com/lit/ds/symlink/tps2480.pdf
+
+Author: Hadrien Copponnex <hadrien.copponnex@xxxxxxxxxxxx>
+
+Description
+-----------
+
+The chips are hot-swap controllers and I2C current monitors.
+
+As a hardware monitoring driver, only the current monitor functionality is
+of interest.
+
+There are no differences between the two chips from the monitoring
+point of view. They differ only by the automatic restart feature implemented
+in the TPS2481 when a fault occurs.
+
+The driver exports 4 variables through the standard hwmon/sysfs mechanism.
+
+  - in0: Bus Voltage [mV]
+  - in1: Shunt Voltage [mV]
+  - curr1: Shunt Current [mA]
+  - power1: Power [uW]
+
+Upon driver instantiation, a reset is performed to put the chip in its default +state. No programming of the chip is necessary to use it as a simple shunt monitor
+(cf. page 36 paragraph 4). The configurable parameters provide different
+conversion/averaging/saturation computations, but the default ones provide the
+best results.
+
+Current and power registers are not used as the equivalent data is computed by +the driver itself. This does not reduce precision but provide less hassle as +otherwise the calibration register would need to be configured and more complex
+computations would have to be done.
+
+Configuration
+-------------
+
+The driver needs to know what is the shunt resistance used to measure the current.
+This information is mandatory and the driver will fail if not reported.
+
+It can be provided using platform data or using the device tree.
+
+For device tree, insert a property called 'shunt' with an unsigned
+integer representing the value in milliohms.
+
+Here is an example of a DTS file snippet declaring the chip for a 30 mOhms shunt:
+
+  ...
+  tps2480@40  {
+    compatible = "tps2480";
+    reg = <0x40>;
+    shunt = <30>;
+  };
+  ...
+
+For platform data, fill the tps2480_platform_data structure defined in
+linux/i2c/tps2480.h. It contains a unique element where shunt can be set.
