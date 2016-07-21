@@ -18,7 +18,7 @@
 #include <linux/spinlock.h>
 #include <linux/of.h>
 
-#define IPMB_SLAVE_ADDR		0x13
+#define IPMB_SLAVE_ADDR		0x20
 
 struct ipmb_msg {
 	u8 slave;
@@ -294,7 +294,6 @@ static int ipmi_i2c_probe(struct i2c_client *client, const struct i2c_device_id 
 
 	spin_lock_init(&ipmi->msg_lock);
 
-	printk("size: %02x\n", sizeof(*ipmi->msg));
 	ipmi->msg = devm_kmalloc(dev,
 			sizeof(*ipmi->msg) + IPMI_MAX_MSG_LENGTH,
 			GFP_KERNEL);
