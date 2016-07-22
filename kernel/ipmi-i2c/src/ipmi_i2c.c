@@ -17,16 +17,15 @@
 #include <linux/module.h>
 #include <linux/spinlock.h>
 #include <linux/of.h>
-
-#define IPMB_SLAVE_ADDR		0x20
+#include <linux/delay.h>
 
 struct ipmb_msg {
 	u8 slave;
 	u8 netfn;
 	u8 hdr_crc;
 	u8 response;
-	u8 seq : 6;
 	u8 response_lun : 2;
+	u8 seq : 6;
 	u8 cmd;
 	union {
 		struct {
@@ -40,6 +39,8 @@ struct ipmb_msg {
 struct ipmi_smi_i2c {
 	struct ipmi_device_id	ipmi_id;
 	ipmi_smi_t		intf;
+
+	int (*response)(struct ipmi_smi_i2c *smi);
 
 	/**
 	 * We assume that there can only be one outstanding request, so
@@ -58,6 +59,9 @@ struct ipmi_smi_i2c {
 	struct i2c_client	*slave;
 };
 
+static int ipmi_i2c_recv(struct ipmi_smi_i2c *smi);
+static int ipmi_devid_recv(struct ipmi_smi_i2c *smi);
+
 static u8 ipmi_crc(const u8 *buf, u32 len)
 {
 	u8 crc = 0;
@@ -67,7 +71,7 @@ static u8 ipmi_crc(const u8 *buf, u32 len)
 		buf++;
 	}
 
-	return (crc ^ 0xff) + 1;
+	return -crc;
 }
 
 static int ipmi_i2c_start_processing(void *send_info, ipmi_smi_t intf)
@@ -76,6 +80,7 @@ static int ipmi_i2c_start_processing(void *send_info, ipmi_smi_t intf)
 
 	printk("%s:\n", __func__);
 	smi->intf = intf;
+	smi->response = ipmi_i2c_recv;
 	return 0;
 }
 
@@ -121,7 +126,7 @@ static void ipmi_i2c_send(void *send_info, struct ipmi_smi_msg *msg)
 	ipmb_msg = &smi->msg->ipmb;
 	ipmb_msg->netfn = msg->data[0];
 	ipmb_msg->cmd = msg->data[1];
-	ipmb_msg->seq++;
+	ipmb_msg->seq = msg->msgid;
 	/* workaround for Emerson firmware (left shift) */
 	ipmb_msg->slave = smi->client->addr << 1;
 	ipmb_msg->response = smi->slave->addr << 1;
@@ -134,8 +139,8 @@ static void ipmi_i2c_send(void *send_info, struct ipmi_smi_msg *msg)
 	   smbus excludes slave address and command as first byte */
 	size = sizeof(*ipmb_msg) + msg->data_size - 2 - 2;
 
-	printk("%s: opal_ipmi_send(%02x, %02x, %u)\n", __func__,
-			ipmb_msg->netfn, ipmb_msg->cmd, size);
+	printk("%s: ipmi_send(%02x, %02x, %02x %u)\n", __func__,
+			ipmb_msg->netfn, ipmb_msg->cmd, smi->msg->raw[4], size);
 	smi->buf_off = 0;
 	rc = i2c_smbus_write_i2c_block_data(smi->client,
 					    smi->msg->raw[1],
@@ -161,10 +166,10 @@ static int ipmi_i2c_recv(struct ipmi_smi_i2c *smi)
 	struct ipmb_msg *ipmb_msg;
 	struct ipmi_smi_msg *msg;
 	unsigned long flags;
-	uint64_t size;
+	size_t size;
 	int rc;
 
-	printk("%s: opal_ipmi_recv(msg, sz)\n", __func__);
+	printk("%s: ipmi_recv(msg, sz)\n", __func__);
 
 	spin_lock_irqsave(&smi->msg_lock, flags);
 
@@ -182,7 +187,7 @@ static int ipmi_i2c_recv(struct ipmi_smi_i2c *smi)
 	/* TODO: calculate & check checksum */
 	rc = 0;
 
-	printk("%s:   -> %d (size %lld)\n", __func__,
+	printk("%s:   -> %d (size %u)\n", __func__,
 			rc, rc == 0 ? size : 0);
 	if (rc) {
 		/* If came via the poll, and response was not yet ready */
@@ -200,13 +205,13 @@ static int ipmi_i2c_recv(struct ipmi_smi_i2c *smi)
 
 	if (size < sizeof(*ipmb_msg)) {
 		spin_unlock_irqrestore(&smi->msg_lock, flags);
-		pr_warn("unexpected IPMI message size %lld\n", size);
+		pr_warn("unexpected IPMI message size %u\n", size);
 		return 0;
 	}
 
 	msg->rsp[0] = ipmb_msg->netfn;
 	msg->rsp[1] = ipmb_msg->cmd;
-	printk("netfn %02x  cmd %02x code %02x  len %02x\n", msg->rsp[0], msg->rsp[1], ipmb_msg->r.data[0], size - sizeof(*ipmb_msg));
+	printk("netfn %02x  cmd %02x code %02x  len %02x\n", msg->rsp[0], msg->rsp[1], ipmb_msg->r.data[0], size);
 	if (size > sizeof(*ipmb_msg))
 		memcpy(&msg->rsp[2], ipmb_msg->r.data, size - sizeof(*ipmb_msg));
 	msg->rsp_size = 2 + size - sizeof(*ipmb_msg);
@@ -215,6 +220,59 @@ static int ipmi_i2c_recv(struct ipmi_smi_i2c *smi)
 	spin_unlock_irqrestore(&smi->msg_lock, flags);
 	ipmi_smi_msg_received(smi->intf, msg);
 	return 0;
+}
+
+static int ipmi_devid_recv(struct ipmi_smi_i2c *smi)
+{
+	struct ipmb_msg *ipmb_msg;
+	uint32_t size;
+	u8 *resp;
+
+	ipmb_msg = &smi->msg->ipmb;
+	resp = smi->msg->raw;
+	size = smi->buf_off;
+
+	/* Follow the order to proper overwrite of fields */
+	resp[0] = ipmb_msg->netfn;
+	resp[1] = ipmb_msg->cmd;
+	if (size > sizeof(*ipmb_msg))
+		memmove(resp+2, ipmb_msg->r.data, size - sizeof(*ipmb_msg));
+
+	//printk("%s: demangle sz %d   rsp %02x %02x %02x\n", __func__, size, resp[0], resp[1], resp[2]);
+	return ipmi_demangle_device_id(resp, size - 2, &smi->ipmi_id);
+}
+
+static int ipmi_i2c_get_devid(struct ipmi_smi_i2c *smi)
+{
+	struct ipmb_msg *ipmb_msg;
+	int rc;
+	int size;
+
+	printk("%s\n", __func__);
+
+	ipmb_msg = &smi->msg->ipmb;
+	ipmb_msg->netfn = IPMI_NETFN_APP_REQUEST << 2;
+	ipmb_msg->cmd = IPMI_GET_DEVICE_ID_CMD;
+	ipmb_msg->seq = 1;
+	/* workaround for Emerson firmware (left shift) */
+	ipmb_msg->slave = smi->client->addr << 1;
+	ipmb_msg->response = smi->slave->addr << 1;
+	ipmb_msg->hdr_crc = ipmi_crc(smi->msg->raw, 2);
+	ipmb_msg->r.eq.cmd_crc = ipmi_crc(smi->msg->raw + 3, 3);
+
+	/* data_size already includes the netfn and cmd bytes and
+	   smbus excludes slave address and command as first byte */
+	size = sizeof(*ipmb_msg) - 2;
+
+	smi->response = ipmi_devid_recv;
+
+	rc = i2c_smbus_write_i2c_block_data(smi->client,
+					    smi->msg->raw[1],
+					    size,
+					    smi->msg->raw + 2);
+
+	printk("%s: sent (%02x,%02x) %d, %d\n", __func__, ipmb_msg->netfn, ipmb_msg->cmd, size, rc);
+	return rc;
 }
 
 static void ipmi_i2c_request_events(void *send_info)
@@ -262,7 +320,7 @@ static int i2c_ipmb_slave_cb(struct i2c_client *client,
 		break;
 
 	case I2C_SLAVE_STOP:
-		ipmi_i2c_recv(smi);
+		smi->response(smi);
 		break;
 
 	case I2C_SLAVE_WRITE_REQUESTED:
@@ -283,7 +341,7 @@ static int ipmi_i2c_probe(struct i2c_client *client, const struct i2c_device_id 
 	int rc;
 
 	struct i2c_board_info info = {
-		I2C_BOARD_INFO("i2c-ipmb-slave", IPMB_SLAVE_ADDR)
+		I2C_BOARD_INFO("i2c-ipmb-slave", IPMI_BMC_SLAVE_ADDR)
 	};
 
 	dev = &client->dev;
@@ -303,23 +361,24 @@ static int ipmi_i2c_probe(struct i2c_client *client, const struct i2c_device_id 
 	}
 
 	ipmi->client = client;
-	printk("i2c_new_device\n");
 	ipmi->slave = i2c_new_device(to_i2c_adapter(client->dev.parent),
 				     &info);
 	ipmi->slave->flags |= I2C_CLIENT_SLAVE;
 
-	printk("i2c_new_device: %p\n", ipmi->slave);
 	rc = i2c_slave_register(ipmi->slave, i2c_ipmb_slave_cb);
-	printk("i2c_slave_register: %d\n", rc);
 	i2c_set_clientdata(client, ipmi);
 	i2c_set_clientdata(ipmi->slave, ipmi);
 	if (rc) {
 		goto err_free;
 	}
 
-	/* todo: query actual ipmi_device_id */
+	//rc = ipmi_i2c_get_devid(ipmi);
+	// wait_for_completion()
+	//msleep(100);
+	//printk("do register\n");
+
 	rc = ipmi_register_smi(&ipmi_i2c_smi_handlers, ipmi,
-			&ipmi->ipmi_id, dev, IPMB_SLAVE_ADDR << 1);
+			&ipmi->ipmi_id, dev, IPMI_BMC_SLAVE_ADDR << 1);
 	printk("ipmi_register_smi: %d\n", rc);
 	if (rc) {
 		dev_warn(dev, "IPMI SMI registration failed (%d)\n", rc);
