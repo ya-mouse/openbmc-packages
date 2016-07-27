@@ -216,8 +216,26 @@ static int ipmi_i2c_recv(struct ipmi_smi_i2c *smi)
 	spin_lock_irqsave(&smi->msg_lock, flags);
 
 	if (!smi->cur_msg) {
+		int i;
+//		struct ipmi_smi_msg lmsg;
 		spin_unlock_irqrestore(&smi->msg_lock, flags);
 		pr_warn("no current message?\n");
+		smi->msg->raw[0] = smi->slave->addr << 1;
+		for (i=0; i<smi->buf_off; i++) {
+			printk("%02x ", smi->msg->raw[i]);
+			if (i && !(i % 16))
+				printk("\n");
+		}
+		printk("\n");
+#if 0
+		memcpy(lmsg.rsp, smi->msg->raw+1, smi->buf_off);
+		lmsg.rsp[0] = smi->msg->raw[1];
+		lmsg.rsp[1] = smi->msg->raw[3];
+		memcpy(lmsg.rsp+2, smi->msg->raw+4, smi->buf_off - 4);
+		lmsg.rsp_size = smi->buf_off - 4;
+		lmsg.data_size = 0;
+		ipmi_smi_msg_received(smi->intf, &lmsg);
+#endif
 		return 0;
 	}
 
