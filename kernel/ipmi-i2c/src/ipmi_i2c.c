@@ -68,6 +68,7 @@ struct ipmi_smi_i2c {
 	} *msg;
 	struct i2c_client	*client;
 	struct i2c_client	*slave;
+	u32			slave_addr;
 };
 
 static int ipmi_i2c_recv(struct ipmi_smi_i2c *smi);
@@ -102,8 +103,12 @@ static void ipmi_i2c_timeout(unsigned long data)
 	unsigned long flags;
 
 	spin_lock_irqsave(&smi->msg_lock, flags);
-	printk("%s\n", __func__);
+	printk("%s: %p\n", __func__, smi->cur_msg);
 	msg = smi->cur_msg;
+	if (!msg) {
+		spin_unlock_irqrestore(&smi->msg_lock, flags);
+		return;
+	}
 	msg->data[0] = smi->msg->ipmb.netfn;
 	msg->data[1] = smi->msg->ipmb.cmd;
 	smi->cur_msg = NULL;
@@ -175,6 +180,9 @@ static void ipmi_i2c_send(void *send_info, struct ipmi_smi_msg *msg)
 	smi->timer.data = (long)smi;
 	add_timer(&smi->timer);
 
+	/* on timeout cur_msg will be used for error reply */
+	smi->cur_msg = msg;
+
 	rc = i2c_smbus_write_i2c_block_data(smi->client,
 					    smi->msg->raw[1],
 					    size,
@@ -182,10 +190,10 @@ static void ipmi_i2c_send(void *send_info, struct ipmi_smi_msg *msg)
 	printk("%s:  -> %d\n", __func__, rc);
 
 	if (!rc) {
-		smi->cur_msg = msg;
 		spin_unlock_irqrestore(&smi->msg_lock, flags);
 		return;
 	}
+	smi->cur_msg = NULL;
 
 	comp = IPMI_ERR_UNSPECIFIED;
 err_unlock:
@@ -374,10 +382,11 @@ static int ipmi_i2c_probe(struct i2c_client *client, const struct i2c_device_id 
 {
 	struct ipmi_smi_i2c *ipmi;
 	struct device *dev;
+	u32 prop;
 	int rc;
 
 	struct i2c_board_info info = {
-		I2C_BOARD_INFO("i2c-ipmb-slave", IPMI_BMC_SLAVE_ADDR)
+		I2C_BOARD_INFO("i2c-ipmb-slave", 0)
 	};
 
 	dev = &client->dev;
@@ -385,6 +394,14 @@ static int ipmi_i2c_probe(struct i2c_client *client, const struct i2c_device_id 
 	ipmi = devm_kzalloc(dev, sizeof(*ipmi), GFP_KERNEL);
 	if (!ipmi)
 		return -ENOMEM;
+
+	rc = of_property_read_u32(dev->of_node, "slave-addr",
+			&prop);
+	if (rc) {
+		prop = IPMI_BMC_SLAVE_ADDR;
+	}
+	ipmi->slave_addr = prop;
+	info.addr = prop;
 
 	spin_lock_init(&ipmi->msg_lock);
 
@@ -408,16 +425,19 @@ static int ipmi_i2c_probe(struct i2c_client *client, const struct i2c_device_id 
 		goto err_free;
 	}
 
-	init_completion(&ipmi->cmd_complete);
-	rc = ipmi_i2c_get_devid(ipmi);
-	if (rc)
-		goto err_free;
-	printk("wait for %lu\n", IPMI_TIMEOUT_JIFFIES);
-	rc = wait_for_completion_interruptible_timeout(&ipmi->cmd_complete,
-						       IPMI_TIMEOUT_JIFFIES);
-	if (rc == 0) {
-		printk("Get Device ID timed out\n");
-		goto err_free;
+	if (ipmi->slave_addr == IPMI_BMC_SLAVE_ADDR) {
+		init_completion(&ipmi->cmd_complete);
+		rc = ipmi_i2c_get_devid(ipmi);
+		if (rc)
+			goto err_free;
+		printk("wait for %lu\n", IPMI_TIMEOUT_JIFFIES);
+		rc = wait_for_completion_interruptible_timeout(&ipmi->cmd_complete,
+							       IPMI_TIMEOUT_JIFFIES);
+		if (rc == 0) {
+			printk("Get Device ID timed out\n");
+//			rc = -ETIMEDOUT;
+//			goto err_free;
+		}
 	}
 	printk("do register\n");
 
@@ -445,9 +465,10 @@ static int ipmi_i2c_remove(struct i2c_client *client)
 {
 	struct ipmi_smi_i2c *smi = i2c_get_clientdata(client);
 
+	del_timer_sync(&smi->timer);
 	i2c_slave_unregister(smi->slave);
 	ipmi_unregister_smi(smi->intf);
-	del_timer_sync(&smi->timer);
+	device_unregister(&smi->slave->dev);
 
 	return 0;
 }
@@ -476,7 +497,7 @@ static struct i2c_driver i2c_ipmb_slave_driver = {
 };
 
 static const struct i2c_device_id ipmi_i2c_ids[] = {
-	{ "aspeed,i2c-ipmb", 0 },
+	{ "i2c-ipmb", 0 },
 	{ },
 };
 MODULE_DEVICE_TABLE(i2c, ipmi_i2c_ids);
