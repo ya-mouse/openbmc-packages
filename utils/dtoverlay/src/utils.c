@@ -37,8 +37,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define OVERLAY_HELP_INDENT 8
 
-int opt_verbose;
-int opt_dry_run;
+int opt_verbose = 0;
+int opt_dry_run = 0;
 static STRING_T *allocated_strings;
 
 struct overlay_help_state_struct
