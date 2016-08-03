@@ -89,9 +89,8 @@ endef
 define Build/Compile
 	$(MAKE) $(PKG_JOBS) -C $(PKG_BUILD_DIR) \
 		HOST_CC="gcc -m32" \
-		CC="$(TARGET_CROSS)gcc" \
-		AR="$(TARGET_CROSS)ar rcu" \
-		RANLIB="$(TARGET_CROSS)ranlib" \
+		CROSS="$(TARGET_CROSS)" \
+		$(if $(findstring c,$(OPENWRT_VERBOSE)),Q= E=@:,) \
 		INSTALL_ROOT=/usr \
 		TARGET_CFLAGS="$(TARGET_CPPFLAGS) $(TARGET_CFLAGS)" \
 		MYLDFLAGS="$(TARGET_LDFLAGS)" \
