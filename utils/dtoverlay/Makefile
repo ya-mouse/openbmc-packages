@@ -30,6 +30,7 @@ define Package/dtoverlay/install
 	$(INSTALL_DIR) $(1)/usr/bin/
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/dtoverlay $(1)/usr/bin/dtoverlay
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/dtmerge $(1)/usr/bin/dtmerge
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/dtc $(1)/usr/bin/dtc
 	$(LN) dtoverlay $(1)/usr/bin/dtparam
 endef
 
