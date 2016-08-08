@@ -18,6 +18,7 @@ define Package/dtoverlay
   SECTION:=utils
   CATEGORY:=Utilities
   TITLE:=DeviceTree manipulation tools
+  URL:=https://github.com/raspberrypi/userland/tree/master/host_applications/linux/apps/dtoverlay
 endef
 
 define Build/Prepare
@@ -29,6 +30,7 @@ define Package/dtoverlay/install
 	$(INSTALL_DIR) $(1)/usr/bin/
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/dtoverlay $(1)/usr/bin/dtoverlay
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/dtmerge $(1)/usr/bin/dtmerge
+	$(LN) dtoverlay $(1)/usr/bin/dtparam
 endef
 
 $(eval $(call BuildPackage,dtoverlay))
