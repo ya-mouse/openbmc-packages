@@ -244,6 +244,11 @@ static int ipmi_i2c_recv(struct ipmi_smi_i2c *smi)
 
 	size = smi->buf_off;
 
+	if (ipmb_msg->netfn == (smi->slave->addr << 1)) {
+		size--;
+		ipmb_msg = (struct ipmb_msg)(smi->msg->raw + 1);
+	}
+
 	/* TODO: calculate & check checksum */
 	rc = 0;
 
