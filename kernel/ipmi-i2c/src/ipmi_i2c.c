@@ -163,16 +163,20 @@ static void ipmi_i2c_send(void *send_info, struct ipmi_smi_msg *msg)
 	ipmb_msg->slave = smi->client->addr << 1;
 	ipmb_msg->response = smi->slave->addr << 1;
 	ipmb_msg->hdr_crc = ipmi_crc(smi->msg->raw, 2);
-	ipmb_msg->r.eq.cmd_crc = ipmi_crc(smi->msg->raw + 3, 3);
-	if (msg->data_size > 2)
-		memcpy(ipmb_msg->r.eq.data, msg->data + 2, msg->data_size - 2);
 
 	/* data_size already includes the netfn and cmd bytes and
 	   smbus excludes slave address and command as first byte */
 	size = sizeof(*ipmb_msg) + msg->data_size - 2 - 2;
 
-	printk("%s: ipmi_send(%02x, %02x, %02x %u)\n", __func__,
-			ipmb_msg->netfn, ipmb_msg->cmd, smi->msg->raw[4], size);
+	if (msg->data_size > 2) {
+		memcpy(ipmb_msg->r.data, msg->data + 2, msg->data_size - 2);
+		ipmb_msg->r.data[msg->data_size - 2] = ipmi_crc(smi->msg->raw + 3, msg->data_size + 1);
+	} else {
+		ipmb_msg->r.eq.cmd_crc = ipmi_crc(smi->msg->raw + 3, 3);
+	}
+
+	printk("%s: ipmi_send(%02x, %02x, %u %u)\n", __func__,
+			ipmb_msg->netfn, ipmb_msg->cmd, msg->data_size, size);
 	smi->buf_off = 0;
 	//mod_timer(&smi->timer, jiffies + IPMI_TIMEOUT_JIFFIES);
 	del_timer_sync(&smi->timer);
@@ -246,7 +250,7 @@ static int ipmi_i2c_recv(struct ipmi_smi_i2c *smi)
 
 	if (ipmb_msg->netfn == (smi->slave->addr << 1)) {
 		size--;
-		ipmb_msg = (struct ipmb_msg)(smi->msg->raw + 1);
+		ipmb_msg = (struct ipmb_msg *)(smi->msg->raw + 1);
 	}
 
 	/* TODO: calculate & check checksum */
