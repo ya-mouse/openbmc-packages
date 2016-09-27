@@ -103,7 +103,7 @@ static void ipmi_i2c_timeout(unsigned long data)
 	unsigned long flags;
 
 	spin_lock_irqsave(&smi->msg_lock, flags);
-	printk("%s: %p\n", __func__, smi->cur_msg);
+	dev_dbg(&smi->client->dev, "%s: %p\n", __func__, smi->cur_msg);
 	msg = smi->cur_msg;
 	if (!msg) {
 		spin_unlock_irqrestore(&smi->msg_lock, flags);
@@ -120,7 +120,6 @@ static int ipmi_i2c_start_processing(void *send_info, ipmi_smi_t intf)
 {
 	struct ipmi_smi_i2c *smi = send_info;
 
-	printk("%s:\n", __func__);
 	smi->intf = intf;
 	smi->response = ipmi_i2c_recv;
 	return 0;
@@ -134,7 +133,6 @@ static void ipmi_i2c_send(void *send_info, struct ipmi_smi_msg *msg)
 	int comp, rc;
 	size_t size;
 
-	printk("%s\n", __func__);
 	/* ensure data_len will fit in the opal_ipmi_msg buffer... */
 	if (msg->data_size > IPMI_MAX_MSG_LENGTH) {
 		comp = IPMI_REQ_LEN_EXCEEDED_ERR;
@@ -175,7 +173,7 @@ static void ipmi_i2c_send(void *send_info, struct ipmi_smi_msg *msg)
 		ipmb_msg->r.eq.cmd_crc = ipmi_crc(smi->msg->raw + 3, 3);
 	}
 
-	printk("%s: ipmi_send(%02x, %02x, %u %u)\n", __func__,
+	dev_dbg(&smi->client->dev, "%s: ipmi_send(%02x, %02x, %u %u)\n", __func__,
 			ipmb_msg->netfn, ipmb_msg->cmd, msg->data_size, size);
 	smi->buf_off = 0;
 	//mod_timer(&smi->timer, jiffies + IPMI_TIMEOUT_JIFFIES);
@@ -191,7 +189,7 @@ static void ipmi_i2c_send(void *send_info, struct ipmi_smi_msg *msg)
 					    smi->msg->raw[1],
 					    size,
 					    smi->msg->raw + 2);
-	printk("%s:  -> %d\n", __func__, rc);
+	dev_dbg(&smi->client->dev, "%s:  -> %d\n", __func__, rc);
 
 	if (!rc) {
 		spin_unlock_irqrestore(&smi->msg_lock, flags);
@@ -214,7 +212,7 @@ static int ipmi_i2c_recv(struct ipmi_smi_i2c *smi)
 	size_t size;
 	int rc;
 
-	printk("%s: ipmi_recv(msg, sz)\n", __func__);
+	dev_dbg(&smi->client->dev, "%s: ipmi_recv(msg, sz)\n", __func__);
 	del_timer_sync(&smi->timer);
 
 	spin_lock_irqsave(&smi->msg_lock, flags);
@@ -256,7 +254,7 @@ static int ipmi_i2c_recv(struct ipmi_smi_i2c *smi)
 	/* TODO: calculate & check checksum */
 	rc = 0;
 
-	printk("%s:   -> %d (size %u)\n", __func__,
+	dev_dbg(&smi->client->dev, "%s:   -> %d (size %u)\n", __func__,
 			rc, rc == 0 ? size : 0);
 	if (rc) {
 		/* If came via the poll, and response was not yet ready */
@@ -280,7 +278,7 @@ static int ipmi_i2c_recv(struct ipmi_smi_i2c *smi)
 
 	msg->rsp[0] = ipmb_msg->netfn;
 	msg->rsp[1] = ipmb_msg->cmd;
-	printk("netfn %02x  cmd %02x code %02x  len %02x\n", msg->rsp[0], msg->rsp[1], ipmb_msg->r.data[0], size);
+	dev_dbg(&smi->client->dev, "netfn %02x  cmd %02x code %02x  len %02x\n", msg->rsp[0], msg->rsp[1], ipmb_msg->r.data[0], size);
 	if (size > sizeof(*ipmb_msg))
 		memcpy(&msg->rsp[2], ipmb_msg->r.data, size - sizeof(*ipmb_msg));
 	msg->rsp_size = 2 + size - sizeof(*ipmb_msg);
@@ -319,7 +317,7 @@ static int ipmi_i2c_get_devid(struct ipmi_smi_i2c *smi)
 	int rc;
 	int size;
 
-	printk("%s\n", __func__);
+	dev_dbg(&smi->client->dev, "%s\n", __func__);
 
 	ipmb_msg = &smi->msg->ipmb;
 	ipmb_msg->netfn = IPMI_NETFN_APP_REQUEST << 2;
@@ -342,26 +340,24 @@ static int ipmi_i2c_get_devid(struct ipmi_smi_i2c *smi)
 					    size,
 					    smi->msg->raw + 2);
 
-	printk("%s: sent (%02x,%02x) %d, %d\n", __func__, ipmb_msg->netfn, ipmb_msg->cmd, size, rc);
+	dev_dbg(&smi->client->dev, "%s: sent (%02x,%02x) %d, %d\n", __func__, ipmb_msg->netfn, ipmb_msg->cmd, size, rc);
 	return rc;
 }
 
 static void ipmi_i2c_request_events(void *send_info)
 {
-	printk("%s\n", __func__);
 }
 
 static void ipmi_i2c_set_run_to_completion(void *send_info,
 		bool run_to_completion)
 {
-	printk("%s\n", __func__);
 }
 
 static void ipmi_i2c_poll(void *send_info)
 {
 	struct ipmi_smi_i2c *smi = send_info;
 
-	printk("%s\n", __func__);
+	dev_dbg(&smi->client->dev, "%s\n", __func__);
 	ipmi_i2c_recv(smi);
 }
 
@@ -457,7 +453,7 @@ static int ipmi_i2c_probe(struct i2c_client *client, const struct i2c_device_id 
 		rc = ipmi_i2c_get_devid(ipmi);
 		if (rc)
 			goto err_free;
-		printk("wait for %lu\n", IPMI_TIMEOUT_JIFFIES);
+		dev_dbg(dev, "wait for %lu\n", IPMI_TIMEOUT_JIFFIES);
 		rc = wait_for_completion_interruptible_timeout(&ipmi->cmd_complete,
 							       IPMI_TIMEOUT_JIFFIES);
 		if (rc == 0) {
@@ -466,13 +462,13 @@ static int ipmi_i2c_probe(struct i2c_client *client, const struct i2c_device_id 
 //			goto err_free;
 		}
 	}
-	printk("do register\n");
+	dev_dbg(dev, "do register\n");
 
 	setup_timer(&ipmi->timer, ipmi_i2c_timeout, (long)ipmi);
 
 	rc = ipmi_register_smi(&ipmi_i2c_smi_handlers, ipmi,
 			&ipmi->device_id, dev, IPMI_BMC_SLAVE_ADDR << 1);
-	printk("ipmi_register_smi: %d\n", rc);
+	dev_dbg(dev, "ipmi_register_smi: %d\n", rc);
 	if (rc) {
 		dev_warn(dev, "IPMI SMI registration failed (%d)\n", rc);
 		goto err_free_msg;
