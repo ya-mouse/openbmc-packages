@@ -1,0 +1,30 @@
+--- u-boot-2016.05/board/aspeed/ast-g4/ast-g4.c.orig	2016-09-26 19:30:54.000000000 +0300
++++ u-boot-2016.05/board/aspeed/ast-g4/ast-g4.c	2016-09-27 14:35:30.068415256 +0300
+@@ -30,7 +30,6 @@ int board_init(void)
+ 
+ 	/* adress of boot parameters */
+ 	gd->bd->bi_boot_params = CONFIG_SYS_SDRAM_BASE + 0x100;
+-	gd->flags = 0;
+ 	return 0;
+ }
+ 
+--- u-boot-2016.05/board/aspeed/ast-g5/ast-g5.c.orig	2016-09-27 14:35:41.000000000 +0300
++++ u-boot-2016.05/board/aspeed/ast-g5/ast-g5.c	2016-09-27 14:35:46.648159683 +0300
+@@ -52,7 +52,6 @@ int board_init(void)
+ {
+ 	/* adress of boot parameters */
+ 	gd->bd->bi_boot_params = CONFIG_SYS_SDRAM_BASE + 0x100;
+-	gd->flags = 0;
+ 	return 0;
+ }
+ 
+--- u-boot-2016.05/board/aspeed/witherspoon-bmc/witherspoon-bmc.c.orig	2016-09-26 19:30:54.000000000 +0300
++++ u-boot-2016.05/board/aspeed/witherspoon-bmc/witherspoon-bmc.c	2016-09-27 14:37:42.478374166 +0300
+@@ -17,7 +17,6 @@ DECLARE_GLOBAL_DATA_PTR;
+ int board_init(void)
+ {
+ 	gd->bd->bi_boot_params = CONFIG_SYS_SDRAM_BASE + 0x100;
+-	gd->flags = 0;
+ 
+ 	return 0;
+ }

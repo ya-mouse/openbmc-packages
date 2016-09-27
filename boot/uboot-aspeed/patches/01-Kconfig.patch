@@ -1,0 +1,90 @@
+--- u-boot-2016.05/configs/ast_g4_defconfig.orig	2016-09-26 19:30:55.000000000 +0300
++++ u-boot-2016.05/configs/ast_g4_defconfig	2016-09-27 14:47:25.365389229 +0300
+@@ -1,6 +1,8 @@
+ CONFIG_ARM=y
+ CONFIG_TARGET_AST_G4=y
+ CONFIG_SPI_FLASH=y
++CONFIG_NETDEVICES=y
++CONFIG_ASPEEDNIC=y
+ CONFIG_SYS_NS16550=y
+ CONFIG_SYS_PROMPT="ast# "
+ CONFIG_CMD_SAVEENV=y
+--- u-boot-2016.05/board/aspeed/Kconfig.orig	2016-09-26 19:30:54.000000000 +0300
++++ u-boot-2016.05/board/aspeed/Kconfig	2016-09-27 13:35:08.296220502 +0300
+@@ -1,3 +1,16 @@
+ source "board/aspeed/ast-g5/Kconfig"
+ source "board/aspeed/ast-g4/Kconfig"
+ source "board/aspeed/witherspoon-bmc/Kconfig"
++
++if SYS_SOC = "aspeed"
++
++config AST_SPI_NOR
++	bool "Use SPI NOR flash type"
++
++config FMC_CS
++	int "Number of SPI flash"
++	range 1 5
++	default "1"
++	depends on AST_SPI_NOR
++
++endif
+--- u-boot-2016.05/drivers/net/Kconfig.orig	2016-09-26 19:30:55.000000000 +0300
++++ u-boot-2016.05/drivers/net/Kconfig	2016-09-27 15:09:30.636981609 +0300
+@@ -174,10 +174,31 @@ config PIC32_ETH
+ 
+ config ASPEEDNIC
+ 	bool "Aspeed ethernet support"
+-	depends on MACH_ARM
++	depends on ARM
+ 	select PHYLIB
+ 	help
+ 	  Network support for the Aspeed ast2400 and ast2500 series network
+ 	  devices including NC-SI support.
+ 
++config FTGMAC100
++	bool "Faraday gigabit ethernet support"
++	depends on ARM
++	select PHYLIB
++	select FTGMAC100_EGIGA
++	help
++	  Network support for the Faraday Gigabite Ethernet.
++
++config FTGMAC100_EGIGA
++	bool
++
++config MAC_NUM
++	int "Number of MACs supported by NIC"
++	range 1 4
++	default "1"
++
++config PHY_MAX_ADDR
++	int "PHY address range"
++	range 1 32
++	default "32"
++
+ endif # NETDEVICES
+--- u-boot-2016.05/include/configs/ast-g4.h.orig	2016-09-26 19:30:55.000000000 +0300
++++ u-boot-2016.05/include/configs/ast-g4.h	2016-09-27 13:36:02.263389508 +0300
+@@ -91,12 +91,12 @@
+ 
+ #define CONFIG_BOOTARGS			"console=ttyS4,115200n8 root=/dev/ram rw"
+ 
+-#define CONFIG_AST_SPI_NOR    /* AST SPI NOR Flash */
+-#define CONFIG_FMC_CS			1
++#ifdef CONFIG_AST_SPI_NOR    /* AST SPI NOR Flash */
+ #define CONFIG_SYS_MAX_FLASH_BANKS 	(CONFIG_FMC_CS)
+ #define CONFIG_SYS_MAX_FLASH_SECT	(8192)		/* max number of sectors on one chip */
+ #define CONFIG_ENV_IS_IN_FLASH		1
+ #define CONFIG_ENV_ADDR			(AST_FMC_CS0_BASE + 0x60000)
++#endif
+ 
+ #define CONFIG_ENV_OFFSET		0x60000	/* environment starts here  */
+ #define CONFIG_ENV_SIZE			0x20000	/* Total Size of Environment Sector */
+@@ -111,7 +111,6 @@
+ 
+ /* Ethernet */
+ #define CONFIG_LIB_RAND
+-#define CONFIG_ASPEEDNIC
+ 
+ /* -------------------------------------------------------------------------
+  * DRAM Config

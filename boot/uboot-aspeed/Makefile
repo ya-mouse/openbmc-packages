@@ -9,16 +9,16 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=u-boot
-PKG_VERSION:=2013.07
+PKG_VERSION:=2016.05
 PKG_RELEASE:=1~git
 
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL:=git://github.com/ya-mouse/openbmc-uboot.git
+PKG_SOURCE_URL:=git://github.com/openbmc/u-boot
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE_VERSION:=HEAD
+PKG_SOURCE_VERSION:=v2016.05-aspeed-openbmc
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_SOURCE_VERSION).tar.gz
 
-PKG_LICENSE:=GPL-2.0 GPL-2.0+
+PKG_LICENSE:=GPL-2.0+
 PKG_LICENSE_FILES:=Licenses/README
 
 include $(INCLUDE_DIR)/package.mk
@@ -64,13 +64,16 @@ UBOOT_IMAGE:=$(if $(IMAGE),$(IMAGE),openwrt-$(BOARD)-$(BUILD_VARIANT)-u-boot.bin
 endif
 
 define Build/Configure
+	$(CP) configs/$(UBOOT_CONFIG)_config \
+		$(PKG_BUILD_DIR)/configs/$(UBOOT_CONFIG)_defconfig
 	$(MAKE) -C $(PKG_BUILD_DIR) \
-		$(UBOOT_CONFIG)_config
+		$(UBOOT_CONFIG)_defconfig
 endef
 
 define Build/Compile
 	$(MAKE) -C $(PKG_BUILD_DIR) \
 		u-boot.bin \
+		$(if $(findstring c,$(OPENWRT_VERBOSE)),V=1,) \
 		CROSS_COMPILE=$(TARGET_CROSS)
 endef
 

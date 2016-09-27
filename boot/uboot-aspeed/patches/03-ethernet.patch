@@ -1,0 +1,12 @@
+--- u-boot-2016.05/board/aspeed/ast-g4/ast-g4.c.orig	2016-09-26 19:30:54.000000000 +0300
++++ u-boot-2016.05/board/aspeed/ast-g4/ast-g4.c	2016-09-27 14:35:30.068415256 +0300
+@@ -73,5 +73,9 @@ int dram_init(void)
+ 
+ int board_eth_init(bd_t *bd)
+ {
++#if CONFIG_ASPEEDNIC
+ 	return aspeednic_initialize(bd);
++#elif CONFIG_FTGMAC100
++        return ftgmac100_initialize(bd);
++#endif
+ }
